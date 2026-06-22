@@ -1,0 +1,69 @@
+{
+  "repo": "https://github.com/zispace/hanzi-words/tree/main/dict",
+  "downloaded_at_unix": 1782095187,
+  "files": [
+    {
+      "filename": "中華語文大辭典.txt",
+      "source_name": "中華語文大辭典",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E4%B8%AD%E8%8F%AF%E8%AA%9E%E6%96%87%E5%A4%A7%E8%BE%AD%E5%85%B8.txt",
+      "bytes": 4445045,
+      "sha256": "a42f5a16e62187a5117f577bc007971553b17d983c794ec6babb1de01d32791e"
+    },
+    {
+      "filename": "兩岸差異用詞.txt",
+      "source_name": "兩岸差異用詞",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E5%85%A9%E5%B2%B8%E5%B7%AE%E7%95%B0%E7%94%A8%E8%A9%9E.txt",
+      "bytes": 73917,
+      "sha256": "232e67950fd0aa7b71273a7dd08e84de9edfa5305c8cc5acef91f84f9d7ce6d4"
+    },
+    {
+      "filename": "古代汉语词典（第1版）.txt",
+      "source_name": "古代汉语词典（第1版）",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E5%8F%A4%E4%BB%A3%E6%B1%89%E8%AF%AD%E8%AF%8D%E5%85%B8%EF%BC%88%E7%AC%AC1%E7%89%88%EF%BC%89.txt",
+      "bytes": 233261,
+      "sha256": "2a8e119c1116bde7cacc525f89952e4aebf68088b83bc7ced66dec1f37bc1d2f"
+    },
+    {
+      "filename": "现代汉语大词典.txt",
+      "source_name": "现代汉语大词典",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E5%A4%A7%E8%AF%8D%E5%85%B8.txt",
+      "bytes": 854613,
+      "sha256": "da9b899957f9a0bad5800ca75a5221869e0745a41747a07da4b335f2abd65b94"
+    },
+    {
+      "filename": "现代汉语规范词典.txt",
+      "source_name": "现代汉语规范词典",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E8%A7%84%E8%8C%83%E8%AF%8D%E5%85%B8.txt",
+      "bytes": 1992362,
+      "sha256": "4d378b358a110a94f6a38d0900b441476658a3dcac3859383f89395886f20ba5"
+    },
+    {
+      "filename": "现代汉语词典（第7版）-拼音.txt",
+      "source_name": "现代汉语词典（第7版）-拼音",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E8%AF%8D%E5%85%B8%EF%BC%88%E7%AC%AC7%E7%89%88%EF%BC%89-%E6%8B%BC%E9%9F%B3.txt",
+      "bytes": 2296038,
+      "sha256": "e0a89dca32b7c4ea722cd099bd896c80879c767f1908835e056b9829a762b5b0"
+    },
+    {
+      "filename": "现代汉语词典（第7版）.txt",
+      "source_name": "现代汉语词典（第7版）",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E8%AF%8D%E5%85%B8%EF%BC%88%E7%AC%AC7%E7%89%88%EF%BC%89.txt",
+      "bytes": 479598,
+      "sha256": "a6b9545c6817e34c6b2ec636efddc74a57a278f1a971c3a9476ee317a4eb6442"
+    },
+    {
+      "filename": "臺灣台語常用詞辭典.txt",
+      "source_name": "臺灣台語常用詞辭典",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E8%87%BA%E7%81%A3%E5%8F%B0%E8%AA%9E%E5%B8%B8%E7%94%A8%E8%A9%9E%E8%BE%AD%E5%85%B8.txt",
+      "bytes": 512815,
+      "sha256": "08146db1b1ab92dafb5689604bc7d4e648efb332bc49d6310d1b86e94229e62d"
+    },
+    {
+      "filename": "近代汉语词典.txt",
+      "source_name": "近代汉语词典",
+      "url": "https://raw.githubusercontent.com/zispace/hanzi-words/main/dict/%E8%BF%91%E4%BB%A3%E6%B1%89%E8%AF%AD%E8%AF%8D%E5%85%B8.txt",
+      "bytes": 368000,
+      "sha256": "e7117011461fb76888a8bd2c91a1fd0cbee2bc89311bba474e828379972a1bf0"
+    }
+  ]
+}

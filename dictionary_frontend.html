@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中文词典检验台</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #64748b;
+      --line: #d8e0ea;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --soft: #e8f5f3;
+      --warn: #9a3412;
+      --danger: #b42318;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1180px, calc(100vw - 28px));
+      margin: 20px auto 40px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .api-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .api-input {
+      width: min(320px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .status {
+      min-width: 76px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status.ok {
+      color: var(--primary-dark);
+    }
+
+    .status.bad {
+      color: var(--danger);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.75fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .search-panel {
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px 14px;
+      font-size: 22px;
+      min-width: 0;
+      outline: none;
+      background: #fff;
+    }
+
+    .search-input:focus,
+    .api-input:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 11px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .btn.secondary:hover {
+      background: #f8fafc;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .search-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .suggestions {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .suggestions.visible {
+      display: grid;
+    }
+
+    .suggestion {
+      display: grid;
+      gap: 2px;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 8px 9px;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .suggestion:hover {
+      border-color: var(--primary);
+      background: var(--soft);
+    }
+
+    .suggestion-word {
+      font-size: 18px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .suggestion-meta {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+
+    .chip:hover,
+    .chip.active {
+      border-color: var(--primary);
+      background: var(--soft);
+      color: var(--primary-dark);
+    }
+
+    .filter-toggle {
+      border: 1px solid var(--primary);
+      background: var(--soft);
+      color: var(--primary-dark);
+      border-radius: 999px;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .filter-toggle.off {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--warn);
+    }
+
+    .result-panel {
+      padding: 14px;
+    }
+
+    .section {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      margin-top: 14px;
+    }
+
+    .section:first-child {
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dict-list,
+    .example-list,
+    .hsk-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: #fff;
+    }
+
+    .dict-head {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin-bottom: 7px;
+    }
+
+    .hanzi {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .trad {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .pinyin {
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: var(--soft);
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .defs {
+      margin: 0;
+      padding-left: 20px;
+      color: #273444;
+    }
+
+    .defs li + li {
+      margin-top: 3px;
+    }
+
+    .zh {
+      font-size: 18px;
+      line-height: 1.45;
+      margin-bottom: 5px;
+    }
+
+    .hit {
+      background: #fff2a8;
+      color: #17202a;
+      border-radius: 4px;
+      padding: 0 2px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    .hit-en {
+      background: #dbeafe;
+    }
+
+    .en {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .empty,
+    .error {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--muted);
+      background: #fbfdff;
+    }
+
+    .error {
+      color: var(--danger);
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .side-panel {
+      padding: 14px;
+      position: sticky;
+      top: 14px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .segmented button {
+      border: 0;
+      padding: 10px;
+      background: #fff;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .segmented button + button {
+      border-left: 1px solid var(--line);
+    }
+
+    .segmented button.active {
+      background: var(--soft);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    .pager {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pager .btn {
+      padding: 8px 10px;
+    }
+
+    .hsk-item-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .loading {
+      opacity: 0.62;
+      pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .topbar,
+      .layout,
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .api-box {
+        justify-content: stretch;
+      }
+
+      .api-input,
+      .btn {
+        width: 100%;
+      }
+
+      .side-panel {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>中文词典检验台</h1>
+      <div class="api-box">
+        <input id="apiBase" class="api-input" value="http://127.0.0.1:8765" aria-label="API 地址">
+        <button id="healthBtn" class="btn secondary" type="button">检查 API</button>
+        <span id="apiStatus" class="status">未检查</span>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div>
+        <div class="panel search-panel">
+          <form id="searchForm" class="search-row">
+            <input id="queryInput" class="search-input" placeholder="输入汉字或词语，例如：学习" autocomplete="off">
+            <select id="limitSelect" aria-label="返回数量">
+              <option value="5">5 条</option>
+              <option value="8" selected>8 条</option>
+              <option value="12">12 条</option>
+            </select>
+            <button class="btn" type="submit">查询</button>
+          </form>
+          <div id="suggestions" class="suggestions" aria-label="词典候选词"></div>
+          <div class="search-options">
+            <div class="chips" id="quickQueries"></div>
+            <button id="filterToggle" class="filter-toggle" type="button">过滤不文明用语：开</button>
+          </div>
+        </div>
+
+        <div class="panel result-panel" id="resultPanel">
+          <div class="empty">输入一个中文汉字或词语开始查询。</div>
+        </div>
+      </div>
+
+      <aside class="panel side-panel">
+        <div class="section-title">
+          <h2>HSK 词库</h2>
+          <span class="meta" id="hskMeta">未加载</span>
+        </div>
+
+        <div class="segmented" role="tablist" aria-label="HSK 类型">
+          <button id="wordModeBtn" class="active" type="button">词语</button>
+          <button id="charModeBtn" type="button">汉字</button>
+        </div>
+
+        <div class="control-grid">
+          <label>
+            等级
+            <select id="hskLevel"></select>
+          </label>
+          <label>
+            每页
+            <select id="hskLimit">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="control-grid" id="wordOnlyControls">
+          <label>
+            词长
+            <select id="minLen">
+              <option value="1">全部</option>
+              <option value="2" selected>两个字以上</option>
+            </select>
+          </label>
+          <label>
+            页码
+            <select id="pageJump"></select>
+          </label>
+        </div>
+
+        <div id="hskPanel" class="hsk-list">
+          <div class="empty">正在加载 HSK 等级。</div>
+        </div>
+
+        <div class="pager">
+          <button id="prevPage" class="btn secondary" type="button">上一页</button>
+          <span id="pageInfo" class="meta">第 1 页</span>
+          <button id="nextPage" class="btn secondary" type="button">下一页</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      hskKind: "words",
+      hskLevels: [],
+      hskOffset: 0,
+      hskTotal: 0,
+      lastSearchController: null,
+      lastSuggestController: null,
+      filterOffensive: true,
+    };
+
+    const quickQueries = ["你", "你好", "学习", "数据库", "我爱你", "你在干什么", "電腦"];
+    const apiBase = document.querySelector("#apiBase");
+    const apiStatus = document.querySelector("#apiStatus");
+    const resultPanel = document.querySelector("#resultPanel");
+    const queryInput = document.querySelector("#queryInput");
+    const suggestions = document.querySelector("#suggestions");
+    const limitSelect = document.querySelector("#limitSelect");
+    const hskPanel = document.querySelector("#hskPanel");
+    const filterToggle = document.querySelector("#filterToggle");
+    const hskMeta = document.querySelector("#hskMeta");
+    const hskLevel = document.querySelector("#hskLevel");
+    const hskLimit = document.querySelector("#hskLimit");
+    const minLen = document.querySelector("#minLen");
+    const pageJump = document.querySelector("#pageJump");
+    const pageInfo = document.querySelector("#pageInfo");
+    const wordModeBtn = document.querySelector("#wordModeBtn");
+    const charModeBtn = document.querySelector("#charModeBtn");
+    const wordOnlyControls = document.querySelector("#wordOnlyControls");
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function highlightQuery(value, query) {
+      const text = String(value ?? "");
+      const needle = String(query ?? "");
+      if (!needle) return escapeHtml(text);
+
+      let html = "";
+      let start = 0;
+      while (start < text.length) {
+        const index = text.indexOf(needle, start);
+        if (index === -1) {
+          html += escapeHtml(text.slice(start));
+          break;
+        }
+        html += escapeHtml(text.slice(start, index));
+        html += `<mark class="hit">${escapeHtml(text.slice(index, index + needle.length))}</mark>`;
+        start = index + needle.length;
+      }
+      return html;
+    }
+
+    const englishStopTerms = new Set([
+      "a", "an", "the", "to", "of", "and", "or", "in", "on", "at", "for", "from",
+      "with", "without", "by", "as", "into", "onto", "only", "etc", "sb", "sth",
+      "one", "some", "used", "variant", "form", "measure", "word", "classifier"
+    ]);
+
+    const beVariants = [
+      "be", "am", "is", "are", "was", "were", "been", "being",
+      "i'm", "you're", "he's", "she's", "it's", "we're", "they're",
+      "that's", "this is", "there's"
+    ];
+
+    function addEnglishTerm(terms, rawTerm) {
+      let term = String(rawTerm || "")
+        .toLowerCase()
+        .replace(/\[[^\]]*]/g, " ")
+        .replace(/[^a-z'\s-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!term) return;
+      if (term.startsWith("to ")) {
+        addEnglishTerm(terms, term.slice(3));
+      }
+
+      if (term === "be" || term === "to be") {
+        beVariants.forEach(value => terms.add(value));
+        return;
+      }
+
+      const words = term.match(/[a-z]+(?:'[a-z]+)?/g) || [];
+      if (words.length > 1 && words.length <= 4 && words.some(word => !englishStopTerms.has(word))) {
+        terms.add(words.join(" "));
+      }
+
+      for (const word of words) {
+        if (word.length < 2 || englishStopTerms.has(word)) continue;
+        terms.add(word);
+        if (/^[a-z]{3,}$/.test(word)) {
+          terms.add(word + "s");
+          if (word.endsWith("y")) {
+            terms.add(word.slice(0, -1) + "ies");
+          }
+          if (word.endsWith("e")) {
+            terms.add(word + "d");
+            terms.add(word.slice(0, -1) + "ing");
+          } else {
+            terms.add(word + "ed");
+            terms.add(word + "ing");
+          }
+        }
+      }
+    }
+
+    function collectEnglishTerms(data) {
+      const terms = new Set();
+      for (const item of data.dictionary || []) {
+        for (const def of item.definitions || []) {
+          const cleaned = String(def)
+            .replace(/\([^)]*\)/g, " ")
+            .replace(/\[[^\]]*]/g, " ");
+          for (const chunk of cleaned.split(/[;,\/]| - | – | — /)) {
+            addEnglishTerm(terms, chunk);
+          }
+        }
+      }
+      return [...terms]
+        .filter(term => term.length >= 2)
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 80);
+    }
+
+    function highlightEnglishTerms(value, terms) {
+      const text = String(value ?? "");
+      if (!text || !terms?.length) return escapeHtml(text);
+
+      const pattern = terms.map(escapeRegExp).join("|");
+      const regex = new RegExp(`(^|[^A-Za-z])(${pattern})(?=$|[^A-Za-z])`, "gi");
+      let html = "";
+      let last = 0;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const prefix = match[1] || "";
+        const termStart = match.index + prefix.length;
+        const termEnd = termStart + match[2].length;
+        html += escapeHtml(text.slice(last, termStart));
+        html += `<mark class="hit hit-en">${escapeHtml(text.slice(termStart, termEnd))}</mark>`;
+        last = termEnd;
+      }
+      html += escapeHtml(text.slice(last));
+      return html;
+    }
+
+    function endpoint(path) {
+      return apiBase.value.replace(/\/+$/, "") + path;
+    }
+
+    async function fetchJson(path, options = {}) {
+      const res = await fetch(endpoint(path), options);
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(text || "响应不是 JSON");
+      }
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "请求失败");
+      }
+      return data;
+    }
+
+    function setStatus(text, kind) {
+      apiStatus.textContent = text;
+      apiStatus.className = "status" + (kind ? " " + kind : "");
+    }
+
+    async function checkHealth() {
+      setStatus("检查中", "");
+      try {
+        await fetchJson("/health");
+        setStatus("可用", "ok");
+      } catch (err) {
+        setStatus("不可用", "bad");
+      }
+    }
+
+    function renderDefinitions(item) {
+      const defs = item.definitions || [];
+      if (!defs.length && item.definition_status === "supplement_pending") {
+        return "<div class=\"meta\">暂无释义，待 LLM 清洗</div>";
+      }
+      if (!defs.length) return "<div class=\"meta\">暂无释义</div>";
+      return `<ol class="defs">${defs.map(def => `<li>${escapeHtml(def)}</li>`).join("")}</ol>`;
+    }
+
+    function dedupeSuggestions(items, query) {
+      const byLexeme = new Map();
+      for (const item of items || []) {
+        const existing = byLexeme.get(item.lexeme_id);
+        if (!existing) {
+          byLexeme.set(item.lexeme_id, item);
+          continue;
+        }
+        const currentStarts = item.surface.startsWith(query);
+        const existingStarts = existing.surface.startsWith(query);
+        if (currentStarts && !existingStarts) {
+          byLexeme.set(item.lexeme_id, item);
+          continue;
+        }
+        if (item.surface === query && existing.surface !== query) {
+          byLexeme.set(item.lexeme_id, item);
+        }
+      }
+      return [...byLexeme.values()];
+    }
+
+    function renderSuggestions(data) {
+      const query = data.normalized_query || "";
+      const items = dedupeSuggestions(data.items || [], query);
+      if (!query || !items.length) {
+        suggestions.classList.remove("visible");
+        suggestions.innerHTML = "";
+        return;
+      }
+      suggestions.innerHTML = items.map(item => `
+        <button class="suggestion" type="button" data-surface="${escapeHtml(item.surface)}">
+          <span class="suggestion-word">${highlightQuery(item.surface, query)}</span>
+          <span class="suggestion-meta">
+            ${escapeHtml(item.pinyin)}
+            ${item.hsk_level ? ` · HSK ${escapeHtml(item.hsk_level)}` : ""}
+            ${item.matched_english ? ` · ${escapeHtml(item.matched_english)}` : ""}
+            ${item.definition_status === "supplement_pending" ? " · 待清洗" : ""}
+          </span>
+        </button>
+      `).join("");
+      suggestions.classList.add("visible");
+    }
+
+    const offensivePatterns = [
+      /他妈|媽的|妈的|操你|我操|卧槽|傻[逼屄]|装逼|牛逼|屌|干你|幹你|去死|混蛋|王八蛋|贱人|賤人|狗屎|屁话|屁話/i,
+      /\bfuck(?:ing|er|ed)?\b/i,
+      /\bshit(?:ty)?\b/i,
+      /\bbitch(?:es)?\b/i,
+      /\basshole(?:s)?\b/i,
+      /\bbastard(?:s)?\b/i,
+      /\bslut(?:s)?\b/i,
+      /\bwhore(?:s)?\b/i,
+      /\bdick(?:s)?\b/i,
+      /\bcunt(?:s)?\b/i
+    ];
+
+    function isOffensiveExample(item) {
+      const text = `${item.zh || ""} ${item.en || ""}`;
+      return offensivePatterns.some(pattern => pattern.test(text));
+    }
+
+    async function loadSuggestions(query) {
+      const q = query.trim();
+      if (!q) {
+        renderSuggestions({ normalized_query: "", items: [] });
+        return;
+      }
+      if (state.lastSuggestController) {
+        state.lastSuggestController.abort();
+      }
+      const controller = new AbortController();
+      state.lastSuggestController = controller;
+      try {
+        const data = await fetchJson(`/api/suggest?q=${encodeURIComponent(q)}&limit=16`, { signal: controller.signal });
+        renderSuggestions(data);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          suggestions.classList.remove("visible");
+          suggestions.innerHTML = "";
+        }
+      }
+    }
+
+    function renderDictionary(items) {
+      if (!items.length) {
+        return "<div class=\"empty\">没有找到词条。</div>";
+      }
+      const dictHtml = items.map(item => `
+        <article class="item">
+          <div class="dict-head">
+            <span class="hanzi">${escapeHtml(item.simplified)}</span>
+            ${item.traditional && item.traditional !== item.simplified ? `<span class="trad">${escapeHtml(item.traditional)}</span>` : ""}
+            <span class="pinyin">${escapeHtml(item.pinyin)}</span>
+            ${item.hsk_word_level ? `<span class="badge">HSK ${escapeHtml(item.hsk_word_level)}</span>` : ""}
+            ${item.definition_status === "supplement_pending" ? `<span class="badge">补充词表</span><span class="badge">待清洗</span>` : ""}
+          </div>
+          ${renderDefinitions(item)}
+          ${item.definition_status === "supplement_pending" && item.sources?.length ? `<div class="meta">来源：${escapeHtml(item.sources.join("、"))}</div>` : ""}
+        </article>
+      `).join("");
+
+      return `<div class="dict-list">${dictHtml}</div>`;
+    }
+
+    function renderCharInfo(charInfo) {
+      if (!charInfo) {
+        return "";
+      }
+      const charHtml = charInfo ? `
+        <article class="item">
+          <div class="dict-head">
+            <span class="hanzi">${escapeHtml(charInfo.hanzi)}</span>
+            ${charInfo.traditional && charInfo.traditional !== charInfo.hanzi ? `<span class="trad">${escapeHtml(charInfo.traditional)}</span>` : ""}
+            <span class="badge">字 HSK ${escapeHtml(charInfo.hsk_level || "-")}</span>
+            ${charInfo.writing_level ? `<span class="badge">书写 ${escapeHtml(charInfo.writing_level)}</span>` : ""}
+          </div>
+          <div class="meta">${escapeHtml(charInfo.examples || "暂无字表例词")}</div>
+        </article>
+      ` : "";
+
+      return `<div class="dict-list">${charHtml}</div>`;
+    }
+
+    function renderExamples(items, query, englishTerms) {
+      const original = items || [];
+      const visible = state.filterOffensive ? original.filter(item => !isOffensiveExample(item)) : original;
+      const hidden = original.length - visible.length;
+      if (!visible.length) {
+        return hidden
+          ? "<div class=\"empty\">这些例句被不文明用语过滤隐藏了。关闭过滤可查看原始语料。</div>"
+          : "<div class=\"empty\">暂无例句。</div>";
+      }
+      const hiddenNote = hidden ? `<div class="meta">已隐藏 ${hidden} 条可能不文明的语句。</div>` : "";
+      return `${hiddenNote}<div class="example-list">${visible.map(item => `
+        <article class="item">
+          <div class="zh">${highlightQuery(item.zh, query)}</div>
+          ${item.en ? `<div class="en">${highlightEnglishTerms(item.en, englishTerms)}</div>` : ""}
+          <div class="meta">${escapeHtml(item.source)} · score ${escapeHtml(item.score)}</div>
+        </article>
+      `).join("")}</div>`;
+    }
+
+    function renderSearchResult(data) {
+      const elapsed = data.server_elapsed_ms ?? data.elapsed_ms;
+      const englishTerms = collectEnglishTerms(data);
+      resultPanel.innerHTML = `
+        <section class="section">
+          <div class="section-title">
+            <h2>词典</h2>
+            <span class="meta">${escapeHtml(data.normalized_query)} · ${escapeHtml(elapsed)} ms</span>
+          </div>
+          ${renderDictionary(data.dictionary || [])}
+        </section>
+        ${data.char ? `
+          <section class="section">
+            <div class="section-title">
+              <h2>汉字信息</h2>
+              <span class="meta">HSK 字表</span>
+            </div>
+            ${renderCharInfo(data.char)}
+          </section>
+        ` : ""}
+        <section class="section">
+          <div class="section-title">
+            <h2>Tatoeba 例句</h2>
+            <span class="meta">${(data.examples?.tatoeba || []).length} 条</span>
+          </div>
+          ${renderExamples(data.examples?.tatoeba || [], data.normalized_query, englishTerms)}
+        </section>
+        <section class="section">
+          <div class="section-title">
+            <h2>OpenSubtitles 日常语句</h2>
+            <span class="meta">${(data.examples?.opensubtitles || []).length} 条 · 字幕片段</span>
+          </div>
+          ${renderExamples(data.examples?.opensubtitles || [], data.normalized_query, englishTerms)}
+        </section>
+        ${(data.examples?.fts || []).length ? `
+          <section class="section">
+            <div class="section-title">
+              <h2>短语兜底</h2>
+              <span class="meta">${data.examples.fts.length} 条</span>
+            </div>
+            ${renderExamples(data.examples.fts, data.normalized_query, englishTerms)}
+          </section>
+        ` : ""}
+      `;
+    }
+
+    async function runSearch(query) {
+      const q = query.trim();
+      if (!q) {
+        resultPanel.innerHTML = "<div class=\"empty\">输入一个中文汉字或词语开始查询。</div>";
+        return;
+      }
+      if (state.lastSearchController) {
+        state.lastSearchController.abort();
+      }
+      const controller = new AbortController();
+      state.lastSearchController = controller;
+      resultPanel.classList.add("loading");
+      try {
+        const limit = Number(limitSelect.value);
+        const data = await fetchJson(`/api/query?q=${encodeURIComponent(q)}&limit=${limit}`, { signal: controller.signal });
+        renderSearchResult(data);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          resultPanel.innerHTML = `<div class="error">查询失败：${escapeHtml(err.message)}</div>`;
+        }
+      } finally {
+        resultPanel.classList.remove("loading");
+      }
+    }
+
+    function renderLevelOptions(levels) {
+      hskLevel.innerHTML = [
+        "<option value=\"\">全部</option>",
+        ...levels.map(item => `<option value="${escapeHtml(item.level)}">HSK ${escapeHtml(item.level)}</option>`)
+      ].join("");
+    }
+
+    function selectedLimit() {
+      return Number(hskLimit.value);
+    }
+
+    function updatePager(total, offset, limit) {
+      const page = Math.floor(offset / limit) + 1;
+      const pages = Math.max(1, Math.ceil(total / limit));
+      pageInfo.textContent = `第 ${page} / ${pages} 页`;
+      document.querySelector("#prevPage").disabled = offset <= 0;
+      document.querySelector("#nextPage").disabled = offset + limit >= total;
+      pageJump.innerHTML = Array.from({ length: Math.min(pages, 200) }, (_, index) => {
+        const pageNo = index + 1;
+        return `<option value="${index * limit}" ${pageNo === page ? "selected" : ""}>第 ${pageNo} 页</option>`;
+      }).join("");
+    }
+
+    function renderHskWords(data) {
+      if (!data.items.length) return "<div class=\"empty\">没有匹配的 HSK 词条。</div>";
+      return data.items.map(item => `
+        <article class="item">
+          <div class="hsk-item-head">
+            <div>
+              <span class="hanzi">${escapeHtml(item.simplified)}</span>
+              ${item.traditional && item.traditional !== item.simplified ? `<span class="trad">${escapeHtml(item.traditional)}</span>` : ""}
+            </div>
+            <span class="badge">HSK ${escapeHtml(item.level)}</span>
+          </div>
+          <div class="pinyin">${escapeHtml(item.pinyin)}</div>
+          ${renderDefinitions(item.definitions)}
+        </article>
+      `).join("");
+    }
+
+    function renderHskChars(data) {
+      if (!data.items.length) return "<div class=\"empty\">没有匹配的 HSK 字表。</div>";
+      return data.items.map(item => `
+        <article class="item">
+          <div class="hsk-item-head">
+            <div>
+              <span class="hanzi">${escapeHtml(item.hanzi)}</span>
+              ${item.traditional && item.traditional !== item.hanzi ? `<span class="trad">${escapeHtml(item.traditional)}</span>` : ""}
+            </div>
+            <span class="badge">HSK ${escapeHtml(item.level)}</span>
+          </div>
+          <div class="meta">${escapeHtml(item.examples || "暂无例词")}</div>
+        </article>
+      `).join("");
+    }
+
+    async function loadHskLevels() {
+      try {
+        const data = await fetchJson("/api/hsk/levels");
+        state.hskLevels = data.levels || [];
+        const wordCount = state.hskLevels.reduce((sum, item) => sum + item.word_count, 0);
+        const charCount = state.hskLevels.reduce((sum, item) => sum + item.char_count, 0);
+        hskMeta.textContent = `${wordCount} 词 / ${charCount} 字`;
+        renderLevelOptions(state.hskLevels);
+      } catch (err) {
+        hskPanel.innerHTML = `<div class="error">加载 HSK 等级失败：${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function loadHskPage(offset = state.hskOffset) {
+      const limit = selectedLimit();
+      state.hskOffset = Math.max(0, offset);
+      const level = hskLevel.value;
+      const path = state.hskKind === "words"
+        ? `/api/hsk/words?level=${encodeURIComponent(level)}&limit=${limit}&offset=${state.hskOffset}&min_len=${Number(minLen.value)}`
+        : `/api/hsk/chars?level=${encodeURIComponent(level)}&limit=${limit}&offset=${state.hskOffset}`;
+      hskPanel.classList.add("loading");
+      try {
+        const data = await fetchJson(path);
+        state.hskTotal = data.total || 0;
+        hskPanel.innerHTML = state.hskKind === "words" ? renderHskWords(data) : renderHskChars(data);
+        updatePager(state.hskTotal, data.offset, data.limit);
+      } catch (err) {
+        hskPanel.innerHTML = `<div class="error">加载词库失败：${escapeHtml(err.message)}</div>`;
+      } finally {
+        hskPanel.classList.remove("loading");
+      }
+    }
+
+    function setHskKind(kind) {
+      state.hskKind = kind;
+      wordModeBtn.classList.toggle("active", kind === "words");
+      charModeBtn.classList.toggle("active", kind === "chars");
+      wordOnlyControls.style.display = kind === "words" ? "grid" : "none";
+      state.hskOffset = 0;
+      loadHskPage(0);
+    }
+
+    function initQuickQueries() {
+      document.querySelector("#quickQueries").innerHTML = quickQueries.map(q => (
+        `<button class="chip" type="button" data-query="${escapeHtml(q)}">${escapeHtml(q)}</button>`
+      )).join("");
+      document.querySelector("#quickQueries").addEventListener("click", event => {
+        const btn = event.target.closest("[data-query]");
+        if (!btn) return;
+        queryInput.value = btn.dataset.query;
+        runSearch(btn.dataset.query);
+      });
+    }
+
+    document.querySelector("#searchForm").addEventListener("submit", event => {
+      event.preventDefault();
+      runSearch(queryInput.value);
+    });
+
+    let debounceTimer = 0;
+    queryInput.addEventListener("input", () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadSuggestions(queryInput.value);
+        runSearch(queryInput.value);
+      }, 180);
+    });
+
+    suggestions.addEventListener("click", event => {
+      const btn = event.target.closest("[data-surface]");
+      if (!btn) return;
+      queryInput.value = btn.dataset.surface;
+      renderSuggestions({ normalized_query: "", items: [] });
+      runSearch(btn.dataset.surface);
+    });
+
+    document.querySelector("#healthBtn").addEventListener("click", checkHealth);
+    filterToggle.addEventListener("click", () => {
+      state.filterOffensive = !state.filterOffensive;
+      filterToggle.textContent = `过滤不文明用语：${state.filterOffensive ? "开" : "关"}`;
+      filterToggle.classList.toggle("off", !state.filterOffensive);
+      if (queryInput.value.trim()) {
+        runSearch(queryInput.value);
+      }
+    });
+    wordModeBtn.addEventListener("click", () => setHskKind("words"));
+    charModeBtn.addEventListener("click", () => setHskKind("chars"));
+    hskLevel.addEventListener("change", () => loadHskPage(0));
+    hskLimit.addEventListener("change", () => loadHskPage(0));
+    minLen.addEventListener("change", () => loadHskPage(0));
+    pageJump.addEventListener("change", () => loadHskPage(Number(pageJump.value)));
+    document.querySelector("#prevPage").addEventListener("click", () => loadHskPage(state.hskOffset - selectedLimit()));
+    document.querySelector("#nextPage").addEventListener("click", () => loadHskPage(state.hskOffset + selectedLimit()));
+
+    initQuickQueries();
+    checkHealth();
+    loadHskLevels().then(() => loadHskPage(0));
+  </script>
+</body>
+</html>

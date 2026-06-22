@@ -1,0 +1,43 @@
+{
+  "name": "chinese-english-dictionary-database",
+  "created_at_utc": "2026-06-22T03:07:11.939542+00:00",
+  "database_file": "dictionary_compact.db",
+  "database_bytes": 640106496,
+  "database_sha256": "6369d6e8ad498cc50582bdc26827e37351df1fd741ad52907683c3769b408cf1",
+  "counts": {
+    "lexeme": 274061,
+    "lexeme_surface": 378499,
+    "lexeme_source": 610007,
+    "sentence": 802920,
+    "example_hit": 2063136,
+    "lexeme_char_suggestion": 962080
+  },
+  "metadata": {
+    "build_profile": "\"compact\"",
+    "cedict_lexemes": "125045",
+    "elapsed_seconds": "1615.066",
+    "en_suggestion_terms": "1788537",
+    "fts": "true",
+    "hsk_chars": "3000",
+    "hsk_serving_chars": "3000",
+    "hsk_serving_words": "14899",
+    "hsk_words": "20744",
+    "lexemes": "274061",
+    "max_key_len": "8",
+    "opensubtitles_limit": "null",
+    "opensubtitles_per_key": "8",
+    "opensubtitles_scanned": "11203286",
+    "opensubtitles_selected_sentences": "721444",
+    "query_keys": "370435",
+    "raw_dir": "\"C:\\\\Users\\\\feng\\\\Desktop\\\\游戏\\\\data\\\\raw\"",
+    "supplement_entries": "548788",
+    "supplement_existing_matches": "399772",
+    "supplement_new_lexemes": "149016",
+    "supplement_source_rows": "610007",
+    "supplement_surface_rows": "175606",
+    "supplement_unique_surfaces": "283669",
+    "tatoeba_sentences": "87168",
+    "zh_suggestion_surfaces": "357505"
+  },
+  "duplicate_policy": "Duplicate examples are removed when Chinese and English are exactly equal after normalization, or equal after stripping terminal punctuation from both Chinese and English."
+}

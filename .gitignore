@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.log
+.venv/
+.uv-cache/
+
+# Local rebuild outputs and backups
+data/processed/
+data/raw/hsk/
+data/raw/mdbg_cc_cedict/
+data/raw/opensubtitles_opus/
+data/raw/tatoeba/
+dist/
+
+# Keep source manifests, not heavyweight raw corpora.
+!data/raw/SOURCES.md
+!data/raw/hanzi_words/dict/manifest.json
