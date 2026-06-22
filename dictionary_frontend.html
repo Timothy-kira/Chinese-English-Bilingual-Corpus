@@ -284,9 +284,152 @@
 
     .dict-list,
     .example-list,
-    .hsk-list {
+    .hsk-list,
+    .game-list {
       display: grid;
       gap: 10px;
+    }
+
+    .game-list {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .game-card {
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 13px;
+      background: #111215;
+      color: #f8fafc;
+      min-height: 260px;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .game-card h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .game-progress {
+      height: 6px;
+      border-radius: 999px;
+      background: #33343a;
+      overflow: hidden;
+    }
+
+    .game-progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: #f59e0b;
+    }
+
+    .game-prompt {
+      display: grid;
+      gap: 5px;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+
+    .game-prompt .pinyin {
+      color: #4b5563;
+      font-size: 13px;
+    }
+
+    .game-prompt .en {
+      color: #cbd5e1;
+    }
+
+    .sound-btn,
+    .mic-btn {
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 8px;
+      background: #10b981;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .game-options,
+    .match-grid,
+    .word-bank,
+    .answer-line {
+      display: grid;
+      gap: 8px;
+    }
+
+    .game-options {
+      grid-template-columns: 1fr;
+    }
+
+    .match-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .game-option,
+    .match-card,
+    .token,
+    .answer-line {
+      border: 1px solid #2f86ff;
+      border-radius: 8px;
+      background: #252328;
+      color: #f8fafc;
+      padding: 10px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .game-option.correct,
+    .match-card.matched {
+      border-color: #10b981;
+      background: #064e3b;
+      color: #d1fae5;
+    }
+
+    .game-option.wrong {
+      border-color: #ef4444;
+      background: #4c1d1d;
+    }
+
+    .match-card.selected {
+      box-shadow: 0 0 0 3px rgba(47, 134, 255, 0.35);
+    }
+
+    .match-card .pinyin {
+      display: block;
+      color: #4b5563;
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .word-bank {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .token {
+      width: auto;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .answer-line {
+      min-height: 48px;
+      border-color: #10b981;
+      background: transparent;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .game-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .item {
@@ -761,8 +904,9 @@
     }
 
     function renderDefinitions(item) {
-      const defs = item.definitions || [];
-      if (!defs.length && item.definition_status === "supplement_pending") {
+      const defs = Array.isArray(item) ? item : (item.definitions || []);
+      const status = Array.isArray(item) ? "" : item.definition_status;
+      if (!defs.length && status === "supplement_pending") {
         return "<div class=\"meta\">暂无释义，待 LLM 清洗</div>";
       }
       if (!defs.length) return "<div class=\"meta\">暂无释义</div>";
@@ -828,6 +972,266 @@
     function isOffensiveExample(item) {
       const text = `${item.zh || ""} ${item.en || ""}`;
       return offensivePatterns.some(pattern => pattern.test(text));
+    }
+
+    const fallbackGamePairs = [
+      { zh: "睡觉", en: "to sleep", pinyin: "shuìjiào" },
+      { zh: "起床", en: "to get up", pinyin: "qǐchuáng" },
+      { zh: "吃饭", en: "to have a meal", pinyin: "chīfàn" },
+      { zh: "洗澡", en: "to shower; to take a bath", pinyin: "xǐzǎo" },
+      { zh: "学习", en: "to study", pinyin: "xuéxí" },
+      { zh: "工作", en: "to work", pinyin: "gōngzuò" },
+    ];
+
+    function normalizeGameText(value) {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function normalizeAnswer(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/[。．.!！?？,，;；:：'"“”‘’、\s]/g, "");
+    }
+
+    function cleanDefinition(definition) {
+      return normalizeGameText(String(definition || "")
+        .replace(/\([^)]*\)/g, " ")
+        .replace(/\[[^\]]*]/g, " ")
+        .split(/[;/]| - | – | — /)[0]);
+    }
+
+    function uniquePairs(pairs) {
+      const seen = new Set();
+      const result = [];
+      for (const pair of pairs) {
+        const zh = normalizeGameText(pair.zh);
+        const en = normalizeGameText(pair.en);
+        if (!zh || !en) continue;
+        const key = `${zh}\n${en}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push({ ...pair, zh, en, pinyin: normalizeGameText(pair.pinyin) });
+      }
+      return result;
+    }
+
+    function shuffled(items) {
+      return [...items].sort(() => Math.random() - 0.5);
+    }
+
+    function visibleExamples(data) {
+      const items = [
+        ...(data.examples?.tatoeba || []),
+        ...(data.examples?.opensubtitles || []),
+        ...(data.examples?.fts || []),
+      ];
+      return state.filterOffensive ? items.filter(item => !isOffensiveExample(item)) : items;
+    }
+
+    function collectGamePairs(data) {
+      const query = data.normalized_query || data.query || "";
+      const dictionaryPairs = [];
+      for (const item of data.dictionary || []) {
+        const definition = cleanDefinition((item.definitions || [])[0] || item.definition || "");
+        if (definition) {
+          dictionaryPairs.push({ zh: item.simplified || query, en: definition, pinyin: item.pinyin || "" });
+        }
+      }
+      const examplePairs = visibleExamples(data)
+        .filter(item => item.zh && item.en)
+        .map(item => ({ zh: item.zh, en: item.en, pinyin: "" }));
+      const preferred = examplePairs.find(item => item.zh.includes(query)) || examplePairs[0] || dictionaryPairs[0];
+      let pairs = uniquePairs([preferred, ...examplePairs, ...dictionaryPairs, ...fallbackGamePairs].filter(Boolean));
+      if (!preferred && query) {
+        const firstDict = (data.dictionary || [])[0] || {};
+        pairs.unshift({
+          zh: firstDict.simplified || query,
+          en: firstDict.pinyin ? `pinyin: ${firstDict.pinyin}` : "meaning pending",
+          pinyin: firstDict.pinyin || "",
+        });
+      }
+      pairs = uniquePairs(pairs);
+      while (pairs.length < 4) {
+        pairs.push(fallbackGamePairs[pairs.length % fallbackGamePairs.length]);
+        pairs = uniquePairs(pairs);
+      }
+      return pairs;
+    }
+
+    function pickOptions(correct, pool, fallbackValues) {
+      const options = [correct];
+      for (const value of [...pool, ...fallbackValues]) {
+        const cleaned = normalizeGameText(value);
+        if (!cleaned || options.includes(cleaned)) continue;
+        options.push(cleaned);
+        if (options.length >= 4) break;
+      }
+      return shuffled(options);
+    }
+
+    function englishTokens(sentence) {
+      const words = String(sentence || "").match(/[A-Za-z]+(?:'[A-Za-z]+)?|[0-9]+(?::[0-9]+)?/g) || [];
+      return words.length ? words : [normalizeGameText(sentence)];
+    }
+
+    function chineseTokens(sentence, query) {
+      const cjk = (String(sentence || "").match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g) || []).join("");
+      if (!cjk) return [normalizeGameText(sentence)];
+      const tokens = [];
+      function pushChars(value) {
+        for (const char of value) tokens.push(char);
+      }
+      if (query && query.length > 1 && cjk.includes(query)) {
+        const parts = cjk.split(query);
+        pushChars(parts[0] || "");
+        tokens.push(query);
+        pushChars(parts.slice(1).join(query));
+      } else {
+        for (let i = 0; i < cjk.length; i += cjk.length > 8 ? 2 : 1) {
+          tokens.push(cjk.slice(i, i + (cjk.length > 8 ? 2 : 1)));
+        }
+      }
+      return tokens.filter(Boolean);
+    }
+
+    function buildGameData(data) {
+      const pairs = collectGamePairs(data);
+      const primary = pairs[0];
+      const matchPairs = pairs.slice(0, 4);
+      const englishPool = pairs.map(item => item.en);
+      const chinesePool = pairs.map(item => item.zh);
+      const enTokens = englishTokens(primary.en);
+      const zhTokens = chineseTokens(primary.zh, data.normalized_query);
+      const enDistractors = ["now", "what", "where", "time"].filter(token => !enTokens.includes(token));
+      const zhDistractors = ["是", "我", "不", "吗"].filter(token => !zhTokens.includes(token));
+      return {
+        query: data.normalized_query || data.query || "",
+        primary,
+        matchPairs,
+        enChoices: pickOptions(primary.en, englishPool, fallbackGamePairs.map(item => item.en)),
+        zhChoices: pickOptions(primary.zh, chinesePool, fallbackGamePairs.map(item => item.zh)),
+        enTokens,
+        zhTokens,
+        enTokenBank: shuffled([...enTokens, ...enDistractors].filter(Boolean)),
+        zhTokenBank: shuffled([...zhTokens, ...zhDistractors].filter(Boolean)),
+      };
+    }
+
+    function renderProgress(width) {
+      return `<div class="game-progress"><span style="width:${width}%"></span></div>`;
+    }
+
+    function renderChoiceGame(game, direction) {
+      const zhToEn = direction === "zh-en";
+      const prompt = zhToEn ? game.primary.zh : game.primary.en;
+      const sub = zhToEn ? game.primary.pinyin : "";
+      const options = zhToEn ? game.enChoices : game.zhChoices;
+      const correct = zhToEn ? game.primary.en : game.primary.zh;
+      return `
+        <article class="game-card">
+          ${renderProgress(zhToEn ? 28 : 42)}
+          <h3>${zhToEn ? "Select the correct translation" : "Select the correct Chinese"}</h3>
+          <div class="game-actions">
+            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="${zhToEn ? "zh-CN" : "en-US"}" data-speak-text="${escapeHtml(prompt)}">🔊</button>
+            <div class="game-prompt">
+              ${sub ? `<span class="pinyin">${escapeHtml(sub)}</span>` : ""}
+              <span>${escapeHtml(prompt)}</span>
+            </div>
+          </div>
+          <div class="game-options">
+            ${options.map(option => `<button class="game-option" type="button" data-correct="${option === correct ? "1" : "0"}">${escapeHtml(option)}</button>`).join("")}
+          </div>
+          <div class="meta game-status">点选答案。</div>
+        </article>
+      `;
+    }
+
+    function renderMatchGame(game) {
+      const left = game.matchPairs.map((pair, index) => ({ side: "zh", id: index, text: pair.zh, pinyin: pair.pinyin }));
+      const right = game.matchPairs.map((pair, index) => ({ side: "en", id: index, text: pair.en, pinyin: "" }));
+      return `
+        <article class="game-card">
+          ${renderProgress(70)}
+          <h3>Tap the matching pairs</h3>
+          <div class="match-grid">
+            ${shuffled([...left, ...right]).map(card => `
+              <button class="match-card" type="button" data-match-id="${card.id}" data-side="${card.side}">
+                ${card.pinyin ? `<span class="pinyin">${escapeHtml(card.pinyin)}</span>` : ""}
+                ${escapeHtml(card.text)}
+              </button>
+            `).join("")}
+          </div>
+          <div class="meta game-status">选一个中文，再选对应英文。</div>
+        </article>
+      `;
+    }
+
+    function renderTokenGame(game, kind) {
+      const isEnglish = kind === "translate";
+      const prompt = isEnglish ? game.primary.zh : "What do you hear?";
+      const answer = isEnglish ? game.enTokens.join(" ") : game.zhTokens.join("");
+      const bank = isEnglish ? game.enTokenBank : game.zhTokenBank;
+      return `
+        <article class="game-card">
+          ${renderProgress(isEnglish ? 58 : 35)}
+          <h3>${isEnglish ? "Translate the sentence" : "What do you hear?"}</h3>
+          <div class="game-actions">
+            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="${isEnglish ? "zh-CN" : "zh-CN"}" data-speak-text="${escapeHtml(game.primary.zh)}">🔊</button>
+            <div class="game-prompt">
+              <span>${escapeHtml(prompt)}</span>
+              ${isEnglish ? `<span class="pinyin">${escapeHtml(game.primary.pinyin)}</span>` : ""}
+            </div>
+          </div>
+          <div class="answer-line" data-answer="${escapeHtml(normalizeAnswer(answer))}"></div>
+          <div class="word-bank">
+            ${bank.map(token => `<button class="token" type="button">${escapeHtml(token)}</button>`).join("")}
+          </div>
+          <div class="game-actions">
+            <button class="btn" type="button" data-game-action="check-tokens">CHECK</button>
+            <span class="meta game-status">按顺序点词块。</span>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderSpeakGame(game) {
+      return `
+        <article class="game-card">
+          ${renderProgress(82)}
+          <h3>Speak the sentence</h3>
+          <div class="game-prompt" style="text-align:center; margin-top:30px;">
+            <span class="pinyin">${escapeHtml(game.primary.pinyin)}</span>
+            <span>${escapeHtml(game.primary.zh)}</span>
+            <span class="en">${escapeHtml(game.primary.en)}</span>
+          </div>
+          <div class="game-actions" style="justify-content:center; margin-top:30px;">
+            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="zh-CN" data-speak-text="${escapeHtml(game.primary.zh)}">🔊</button>
+            <button class="mic-btn" type="button" data-game-action="record" data-answer="${escapeHtml(normalizeAnswer(game.primary.zh))}">🎙</button>
+          </div>
+          <div class="meta game-status">先听一遍，再点麦克风跟读。</div>
+        </article>
+      `;
+    }
+
+    function renderGames(data) {
+      const game = buildGameData(data);
+      state.currentGame = game;
+      return `
+        <section class="section">
+          <div class="section-title">
+            <h2>小游戏</h2>
+            <span class="meta">由当前词条和例句自动生成</span>
+          </div>
+          <div class="game-list">
+            ${renderChoiceGame(game, "zh-en")}
+            ${renderChoiceGame(game, "en-zh")}
+            ${renderMatchGame(game)}
+            ${renderTokenGame(game, "translate")}
+            ${renderSpeakGame(game)}
+            ${renderTokenGame(game, "listen")}
+          </div>
+        </section>
+      `;
     }
 
     async function loadSuggestions(query) {
@@ -931,6 +1335,7 @@
             ${renderCharInfo(data.char)}
           </section>
         ` : ""}
+        ${renderGames(data)}
         <section class="section">
           <div class="section-title">
             <h2>Tatoeba 例句</h2>
@@ -1091,6 +1496,133 @@
         runSearch(btn.dataset.query);
       });
     }
+
+    function setGameStatus(card, message) {
+      const status = card?.querySelector(".game-status");
+      if (status) status.textContent = message;
+    }
+
+    function speakText(text, lang) {
+      if (!("speechSynthesis" in window)) return false;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang || "zh-CN";
+      utterance.rate = lang === "en-US" ? 0.92 : 0.82;
+      window.speechSynthesis.speak(utterance);
+      return true;
+    }
+
+    function handleChoice(button) {
+      const card = button.closest(".game-card");
+      const options = card.querySelectorAll(".game-option");
+      options.forEach(option => option.disabled = true);
+      if (button.dataset.correct === "1") {
+        button.classList.add("correct");
+        setGameStatus(card, "正确。");
+      } else {
+        button.classList.add("wrong");
+        const correct = [...options].find(option => option.dataset.correct === "1");
+        correct?.classList.add("correct");
+        setGameStatus(card, "不对，绿色的是正确答案。");
+      }
+    }
+
+    function handleMatch(cardButton) {
+      if (cardButton.classList.contains("matched")) return;
+      const card = cardButton.closest(".game-card");
+      const selected = card.querySelector(".match-card.selected");
+      if (!selected || selected === cardButton) {
+        card.querySelectorAll(".match-card.selected").forEach(item => item.classList.remove("selected"));
+        cardButton.classList.add("selected");
+        return;
+      }
+      if (selected.dataset.side !== cardButton.dataset.side && selected.dataset.matchId === cardButton.dataset.matchId) {
+        selected.classList.remove("selected");
+        selected.classList.add("matched");
+        cardButton.classList.add("matched");
+        const remaining = card.querySelectorAll(".match-card:not(.matched)").length;
+        setGameStatus(card, remaining ? "配对成功，继续。" : "全部配对完成。");
+      } else {
+        selected.classList.remove("selected");
+        cardButton.classList.add("selected");
+        setGameStatus(card, "这两个不是一对。");
+      }
+    }
+
+    function handleToken(token) {
+      const card = token.closest(".game-card");
+      const line = card.querySelector(".answer-line");
+      const bank = card.querySelector(".word-bank");
+      if (token.closest(".answer-line")) {
+        bank.appendChild(token);
+      } else {
+        line.appendChild(token);
+      }
+    }
+
+    function checkTokenAnswer(button) {
+      const card = button.closest(".game-card");
+      const line = card.querySelector(".answer-line");
+      const answer = [...line.querySelectorAll(".token")].map(item => item.textContent).join(" ");
+      if (normalizeAnswer(answer) === line.dataset.answer) {
+        setGameStatus(card, "正确。");
+        line.style.borderColor = "#10b981";
+      } else {
+        setGameStatus(card, "顺序还不对，再调整一下。");
+        line.style.borderColor = "#ef4444";
+      }
+    }
+
+    function handleRecord(button) {
+      const card = button.closest(".game-card");
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Recognition) {
+        setGameStatus(card, "当前浏览器不支持语音识别，可以先用跟读模式练习。");
+        return;
+      }
+      const recognition = new Recognition();
+      recognition.lang = "zh-CN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      setGameStatus(card, "正在听，请开始说。");
+      recognition.onresult = event => {
+        const said = event.results?.[0]?.[0]?.transcript || "";
+        const ok = normalizeAnswer(said).includes(button.dataset.answer) || button.dataset.answer.includes(normalizeAnswer(said));
+        setGameStatus(card, ok ? `识别到：${said}。通过。` : `识别到：${said}。再试一次。`);
+      };
+      recognition.onerror = () => setGameStatus(card, "没有识别成功，再点一次麦克风。");
+      recognition.start();
+    }
+
+    resultPanel.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-game-action]");
+      if (actionButton) {
+        const action = actionButton.dataset.gameAction;
+        if (action === "speak") {
+          const ok = speakText(actionButton.dataset.speakText || "", actionButton.dataset.speakLang || "zh-CN");
+          setGameStatus(actionButton.closest(".game-card"), ok ? "正在播放。" : "当前浏览器不支持语音播放。");
+        } else if (action === "check-tokens") {
+          checkTokenAnswer(actionButton);
+        } else if (action === "record") {
+          handleRecord(actionButton);
+        }
+        return;
+      }
+      const choice = event.target.closest(".game-option");
+      if (choice) {
+        handleChoice(choice);
+        return;
+      }
+      const matchCard = event.target.closest(".match-card");
+      if (matchCard) {
+        handleMatch(matchCard);
+        return;
+      }
+      const token = event.target.closest(".token");
+      if (token) {
+        handleToken(token);
+      }
+    });
 
     document.querySelector("#searchForm").addEventListener("submit", event => {
       event.preventDefault();
