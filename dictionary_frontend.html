@@ -975,12 +975,12 @@
     }
 
     const fallbackGamePairs = [
-      { zh: "睡觉", en: "to sleep", pinyin: "shuìjiào" },
-      { zh: "起床", en: "to get up", pinyin: "qǐchuáng" },
-      { zh: "吃饭", en: "to have a meal", pinyin: "chīfàn" },
-      { zh: "洗澡", en: "to shower; to take a bath", pinyin: "xǐzǎo" },
-      { zh: "学习", en: "to study", pinyin: "xuéxí" },
-      { zh: "工作", en: "to work", pinyin: "gōngzuò" },
+      { zh: "睡觉", en: "to sleep", pinyin: "shuìjiào", source: "fallback" },
+      { zh: "起床", en: "to get up", pinyin: "qǐchuáng", source: "fallback" },
+      { zh: "吃饭", en: "to have a meal", pinyin: "chīfàn", source: "fallback" },
+      { zh: "洗澡", en: "to shower; to take a bath", pinyin: "xǐzǎo", source: "fallback" },
+      { zh: "学习", en: "to study", pinyin: "xuéxí", source: "fallback" },
+      { zh: "工作", en: "to work", pinyin: "gōngzuò", source: "fallback" },
     ];
 
     function normalizeGameText(value) {
@@ -991,6 +991,18 @@
       return String(value || "")
         .toLowerCase()
         .replace(/[。．.!！?？,，;；:：'"“”‘’、\s]/g, "");
+    }
+
+    function cjkText(value) {
+      return (String(value || "").match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g) || []).join("");
+    }
+
+    function cjkCharCount(value) {
+      return cjkText(value).length;
+    }
+
+    function englishWordCount(value) {
+      return englishTokens(value).filter(token => /[A-Za-z]/.test(token)).length;
     }
 
     function cleanDefinition(definition) {
@@ -1007,7 +1019,7 @@
         const zh = normalizeGameText(pair.zh);
         const en = normalizeGameText(pair.en);
         if (!zh || !en) continue;
-        const key = `${zh}\n${en}`;
+        const key = `${normalizeAnswer(zh)}\n${normalizeAnswer(en)}`;
         if (seen.has(key)) continue;
         seen.add(key);
         result.push({ ...pair, zh, en, pinyin: normalizeGameText(pair.pinyin) });
@@ -1028,30 +1040,64 @@
       return state.filterOffensive ? items.filter(item => !isOffensiveExample(item)) : items;
     }
 
+    function isUsableGameExample(pair, query, hintWords = []) {
+      const zhChars = cjkCharCount(pair.zh);
+      const enWords = englishWordCount(pair.en);
+      const text = `${pair.zh} ${pair.en}`;
+      if (/tatoeba|opensubtitles/i.test(text)) return false;
+      if (!zhChars || !enWords) return false;
+      if (pair.zh.length > 80 || pair.en.length > 180) return false;
+      if (pair.source === "opensubtitles") {
+        const compactEn = pair.en.toLowerCase().replace(/[^a-z]+/g, " ").trim();
+        const compactWords = compactEn.split(/\s+/).filter(Boolean);
+        const weakInterjections = new Set(["whoa", "ok", "okay", "yeah", "yes", "no", "uh", "um", "hey", "huh"]);
+        const exactQuery = query && normalizeAnswer(pair.zh) === normalizeAnswer(query);
+        const nearQuery = query && zhChars <= cjkCharCount(query) + 4;
+        const hasHintWord = hintWords.some(word => compactEn.includes(word));
+        if (compactWords.length && compactWords.every(word => weakInterjections.has(word))) return false;
+        if (hintWords.length && nearQuery && !hasHintWord) return false;
+        if ((zhChars <= 4 || exactQuery) && enWords >= 5) return false;
+      }
+      return true;
+    }
+
     function collectGamePairs(data) {
       const query = data.normalized_query || data.query || "";
       const dictionaryPairs = [];
       for (const item of data.dictionary || []) {
         const definition = cleanDefinition((item.definitions || [])[0] || item.definition || "");
         if (definition) {
-          dictionaryPairs.push({ zh: item.simplified || query, en: definition, pinyin: item.pinyin || "" });
+          dictionaryPairs.push({ zh: item.simplified || query, en: definition, pinyin: item.pinyin || "", source: "dictionary" });
         }
       }
+      const hintWords = [...new Set(dictionaryPairs
+        .flatMap(item => englishTokens(item.en))
+        .map(token => normalizeAnswer(token))
+        .filter(token => token.length >= 4))];
       const examplePairs = visibleExamples(data)
         .filter(item => item.zh && item.en)
-        .map(item => ({ zh: item.zh, en: item.en, pinyin: "" }));
-      const preferred = examplePairs.find(item => item.zh.includes(query)) || examplePairs[0] || dictionaryPairs[0];
-      let pairs = uniquePairs([preferred, ...examplePairs, ...dictionaryPairs, ...fallbackGamePairs].filter(Boolean));
-      if (!preferred && query) {
+        .map(item => ({ zh: item.zh, en: item.en, pinyin: "", source: item.source || "" }))
+        .filter(item => isUsableGameExample(item, query, hintWords));
+      const stableExamples = examplePairs.filter(item => item.source !== "opensubtitles");
+      const subtitleExamples = examplePairs.filter(item => item.source === "opensubtitles");
+      const useSubtitleExamples = stableExamples.length + dictionaryPairs.length < 6;
+      let pairs = uniquePairs([
+        ...stableExamples,
+        ...dictionaryPairs,
+        ...(useSubtitleExamples ? subtitleExamples : []),
+        ...fallbackGamePairs,
+      ].filter(Boolean));
+      if (!pairs.length && query) {
         const firstDict = (data.dictionary || [])[0] || {};
         pairs.unshift({
           zh: firstDict.simplified || query,
           en: firstDict.pinyin ? `pinyin: ${firstDict.pinyin}` : "meaning pending",
           pinyin: firstDict.pinyin || "",
+          source: "fallback",
         });
       }
       pairs = uniquePairs(pairs);
-      while (pairs.length < 4) {
+      while (pairs.length < 6) {
         pairs.push(fallbackGamePairs[pairs.length % fallbackGamePairs.length]);
         pairs = uniquePairs(pairs);
       }
@@ -1075,7 +1121,7 @@
     }
 
     function chineseTokens(sentence, query) {
-      const cjk = (String(sentence || "").match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g) || []).join("");
+      const cjk = cjkText(sentence);
       if (!cjk) return [normalizeGameText(sentence)];
       const tokens = [];
       function pushChars(value) {
@@ -1094,26 +1140,41 @@
       return tokens.filter(Boolean);
     }
 
-    function buildGameData(data) {
-      const pairs = collectGamePairs(data);
-      const primary = pairs[0];
-      const matchPairs = pairs.slice(0, 4);
+    function makeGameRound(pair, pairs, query) {
       const englishPool = pairs.map(item => item.en);
       const chinesePool = pairs.map(item => item.zh);
-      const enTokens = englishTokens(primary.en);
-      const zhTokens = chineseTokens(primary.zh, data.normalized_query);
-      const enDistractors = ["now", "what", "where", "time"].filter(token => !enTokens.includes(token));
-      const zhDistractors = ["是", "我", "不", "吗"].filter(token => !zhTokens.includes(token));
+      const enTokens = englishTokens(pair.en);
+      const zhTokens = chineseTokens(pair.zh, query);
+      const enTokenKeys = new Set(enTokens.map(token => normalizeAnswer(token)));
+      const zhTokenKeys = new Set(zhTokens.map(token => normalizeAnswer(token)));
+      const enDistractors = ["now", "what", "where", "time"].filter(token => !enTokenKeys.has(normalizeAnswer(token)));
+      const zhDistractors = ["是", "我", "不", "吗"].filter(token => !zhTokenKeys.has(normalizeAnswer(token)));
       return {
-        query: data.normalized_query || data.query || "",
-        primary,
-        matchPairs,
-        enChoices: pickOptions(primary.en, englishPool, fallbackGamePairs.map(item => item.en)),
-        zhChoices: pickOptions(primary.zh, chinesePool, fallbackGamePairs.map(item => item.zh)),
+        pair,
+        enChoices: pickOptions(pair.en, englishPool, fallbackGamePairs.map(item => item.en)),
+        zhChoices: pickOptions(pair.zh, chinesePool, fallbackGamePairs.map(item => item.zh)),
         enTokens,
         zhTokens,
         enTokenBank: shuffled([...enTokens, ...enDistractors].filter(Boolean)),
         zhTokenBank: shuffled([...zhTokens, ...zhDistractors].filter(Boolean)),
+      };
+    }
+
+    function buildGameData(data) {
+      const pairs = collectGamePairs(data);
+      const query = data.normalized_query || data.query || "";
+      const exercisePairs = pairs.filter(pair => pair.source !== "fallback");
+      if (!exercisePairs.length) exercisePairs.push(...pairs);
+      const pairAt = index => exercisePairs[index % exercisePairs.length] || pairs[index % pairs.length] || fallbackGamePairs[0];
+      const matchPairs = uniquePairs([...exercisePairs, ...pairs]).slice(0, 4);
+      return {
+        query,
+        matchPairs,
+        choiceZhEn: makeGameRound(pairAt(0), pairs, query),
+        choiceEnZh: makeGameRound(pairAt(1), pairs, query),
+        translate: makeGameRound(pairAt(2), pairs, query),
+        speak: makeGameRound(pairAt(3), pairs, query),
+        listen: makeGameRound(pairAt(4), pairs, query),
       };
     }
 
@@ -1123,10 +1184,12 @@
 
     function renderChoiceGame(game, direction) {
       const zhToEn = direction === "zh-en";
-      const prompt = zhToEn ? game.primary.zh : game.primary.en;
-      const sub = zhToEn ? game.primary.pinyin : "";
-      const options = zhToEn ? game.enChoices : game.zhChoices;
-      const correct = zhToEn ? game.primary.en : game.primary.zh;
+      const round = zhToEn ? game.choiceZhEn : game.choiceEnZh;
+      const pair = round.pair;
+      const prompt = zhToEn ? pair.zh : pair.en;
+      const sub = zhToEn ? pair.pinyin : "";
+      const options = zhToEn ? round.enChoices : round.zhChoices;
+      const correct = zhToEn ? pair.en : pair.zh;
       return `
         <article class="game-card">
           ${renderProgress(zhToEn ? 28 : 42)}
@@ -1168,18 +1231,20 @@
 
     function renderTokenGame(game, kind) {
       const isEnglish = kind === "translate";
-      const prompt = isEnglish ? game.primary.zh : "What do you hear?";
-      const answer = isEnglish ? game.enTokens.join(" ") : game.zhTokens.join("");
-      const bank = isEnglish ? game.enTokenBank : game.zhTokenBank;
+      const round = isEnglish ? game.translate : game.listen;
+      const pair = round.pair;
+      const prompt = isEnglish ? pair.zh : "What do you hear?";
+      const answer = isEnglish ? round.enTokens.join(" ") : round.zhTokens.join("");
+      const bank = isEnglish ? round.enTokenBank : round.zhTokenBank;
       return `
         <article class="game-card">
           ${renderProgress(isEnglish ? 58 : 35)}
           <h3>${isEnglish ? "Translate the sentence" : "What do you hear?"}</h3>
           <div class="game-actions">
-            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="${isEnglish ? "zh-CN" : "zh-CN"}" data-speak-text="${escapeHtml(game.primary.zh)}">🔊</button>
+            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="zh-CN" data-speak-text="${escapeHtml(pair.zh)}">🔊</button>
             <div class="game-prompt">
               <span>${escapeHtml(prompt)}</span>
-              ${isEnglish ? `<span class="pinyin">${escapeHtml(game.primary.pinyin)}</span>` : ""}
+              ${isEnglish ? `<span class="pinyin">${escapeHtml(pair.pinyin)}</span>` : ""}
             </div>
           </div>
           <div class="answer-line" data-answer="${escapeHtml(normalizeAnswer(answer))}"></div>
@@ -1195,18 +1260,19 @@
     }
 
     function renderSpeakGame(game) {
+      const pair = game.speak.pair;
       return `
         <article class="game-card">
           ${renderProgress(82)}
           <h3>Speak the sentence</h3>
           <div class="game-prompt" style="text-align:center; margin-top:30px;">
-            <span class="pinyin">${escapeHtml(game.primary.pinyin)}</span>
-            <span>${escapeHtml(game.primary.zh)}</span>
-            <span class="en">${escapeHtml(game.primary.en)}</span>
+            <span class="pinyin">${escapeHtml(pair.pinyin)}</span>
+            <span>${escapeHtml(pair.zh)}</span>
+            <span class="en">${escapeHtml(pair.en)}</span>
           </div>
           <div class="game-actions" style="justify-content:center; margin-top:30px;">
-            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="zh-CN" data-speak-text="${escapeHtml(game.primary.zh)}">🔊</button>
-            <button class="mic-btn" type="button" data-game-action="record" data-answer="${escapeHtml(normalizeAnswer(game.primary.zh))}">🎙</button>
+            <button class="sound-btn" type="button" data-game-action="speak" data-speak-lang="zh-CN" data-speak-text="${escapeHtml(pair.zh)}">🔊</button>
+            <button class="mic-btn" type="button" data-game-action="record" data-answer="${escapeHtml(normalizeAnswer(pair.zh))}">🎙</button>
           </div>
           <div class="meta game-status">先听一遍，再点麦克风跟读。</div>
         </article>
